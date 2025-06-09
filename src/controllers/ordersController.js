@@ -1,6 +1,5 @@
 const { body, validationResult } = require("express-validator");
-const Order = require("../models/orders");
-const Product = require("../models/products");
+const { getOrders: getAllOrders, getOrdersByUserId, createOrder: createNewOrder, updateOrder: modifyOrder } = require('../repositories/orderRepository');
 const User = require("../models/users");
 
 const getOrders = async (req, res) => {
@@ -13,19 +12,17 @@ const getOrders = async (req, res) => {
         }
 
         if (user.role !== "admin") {
-            const orders = await Order.find({ userId: user._id })
-            if (orders.length === 0 || orders.length === undefined) {
+            const orders = await getOrdersByUserId(user._id);
+            if (!orders || orders.length === 0) {
                 return res.error("No orders found", 404);
             }
             return res.success(orders);
         }
 
-        const orders = await Order.find();
-
-        if (orders.length === 0 || orders.length === undefined) {
+        const orders = await getAllOrders();
+        if (!orders || orders.length === 0) {
             return res.error("No orders found", 404);
         }
-
         return res.success(orders);
     } catch (err) {
         return res.error("Error while trying to get orders", 500);
@@ -52,32 +49,17 @@ const createOrder = async (req, res) => {
     if (!errors.isEmpty()) {
         return res.error("Validation errors", 400, errors.array());
     }
-
-    const { products, userId } = req.body;
-    let totalAmount = 0;
-
-    for (const product of products) {
-        const productData = await Product.findById(product.productId);
-
-        if (!productData) {
-            return res.error("Product not found: " + product.productId, 404);
-        }
-        if (productData.stock < product.quantity) {
-            return res.error("Insufficient stock for productId: " + product.productId, 400);
-        }
-
-        productData.stock -= product.quantity;
-        await productData.save();
-
-        totalAmount += productData.price * product.quantity;
-    }
-
     try {
-        const newOrder = new Order({ userId, products, totalAmount });
-        await newOrder.save();
-        return res.success(newOrder, 201);
+        const createdOrder = await createNewOrder(req.body);
+        return res.success(createdOrder, 201);
     } catch (err) {
-        return res.error("Error while trying to create order", 500);
+        if (err.message.includes("Product not found")) {
+            return res.error(err.message, 404);
+        }
+        if (err.message.includes("Insufficient stock")) {
+            return res.error(err.message, 400);
+        }
+        return res.error("Error while trying to create order: " + err, 500);
     }
 }
 
@@ -91,48 +73,21 @@ const updateOrder = async (req, res) => {
             return res.error("Invalid ID format in params", 400);
         }
 
-        const order = await Order.findById(id);
-
-        if (!order) {
+        const updatedOrder = await modifyOrder(id, req.body);
+        if (!updatedOrder || updatedOrder.length === 0) {
             return res.error("Order not found", 404);
         }
-
-        if (req.body.status === order.status) {
-            return res.error("Order status is already " + req.body.status, 400);
-        }
-
-        if (req.body.status === "cancelled") {
-            for (const product of order.products) {
-                const productData = await Product.findById(product.productId);
-                if (!productData) {
-                    return res.error("Product not found: " + product.productId, 404);
-                }
-                productData.stock += product.quantity;
-                await productData.save();
-            }
-        }
-
-        if (req.body.status === "sent" || req.body.status === "pending") {
-            for (const product of order.products) {
-                const productData = await Product.findById(product.productId);
-                if (!productData) {
-                    return res.error("Product not found: " + product.productId, 404);
-                }
-                if (productData.stock < product.quantity) {
-                    return res.error("Insufficient stock for productId: " + product.productId, 400);
-                }
-                productData.stock -= product.quantity;
-                await productData.save();
-            }
-        }
-
-        const updatedOrder = await Order.updateOne({ _id: id }, { $set: { status: req.body.status }}, { new: true });
-        if (!updatedOrder) {
-            return res.error("Order not found", 404);
-        }
-
         return res.success(updatedOrder);
     } catch (err) {
+        if (err.message.includes("Order status is already")) {
+            return res.error(err.message, 400);
+        }
+        if (err.message.includes("Product not found")) {
+            return res.error(err.message, 404);
+        }
+        if (err.message.includes("Insufficient stock")) {
+            return res.error(err.message, 400);
+        }
         return res.error("Error while trying to update order " + err, 500);
     }
 }

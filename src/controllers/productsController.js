@@ -1,10 +1,10 @@
 const { body, validationResult } = require("express-validator");
-const Product = require("../models/products");
+const { getProducts: getAllProducts, createProduct: createNewProduct, updateProduct: modifyProduct, deleteProduct: removeProduct } = require('../repositories/productRepository');
 
 const getProducts = async(req, res) => {
     try {
-        const products = await Product.find();
-        if (products.length === 0 || products.length === undefined) {
+        const products = await getAllProducts();
+        if (!products || products.length === 0) {
             return res.error("No products found", 404);
         }
         res.success(products);
@@ -45,8 +45,7 @@ const createProduct = async(req, res) => {
         return res.error("Validation errors", 400, errors.array());
     }
     try {
-        const newProduct = new Product(req.body);
-        const createdProduct = await newProduct.save();
+        const createdProduct = await createNewProduct(req.body);
         res.success(createdProduct, 201);
     } catch (err) {
         res.error(err.message, 400);
@@ -60,8 +59,8 @@ const updateProduct = async (req, res) => {
         return res.error("Validation errors", 400, errors.array());
     }
     try {
-        const updatedProduct = await Product.findByIdAndUpdate(id, req.body, { new: true });
-        if (!updatedProduct) {
+        const updatedProduct = await modifyProduct(id, req.body);
+        if (!updatedProduct || updatedProduct.length === 0) {
             return res.error("Product not found", 404);
         }
         res.success(updatedProduct);
@@ -73,8 +72,8 @@ const updateProduct = async (req, res) => {
 const deleteProduct = async (req, res) => {
     const { id } = req.params;
     try {
-        const deletedProduct = await Product.findByIdAndDelete(id);
-        if (!deletedProduct) {
+        const deletedProduct = await removeProduct(id);
+        if (!deletedProduct || deletedProduct.length === 0) {
             return res.error("Product not found", 404);
         }
         res.success(deletedProduct, 204);

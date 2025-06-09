@@ -1,7 +1,5 @@
-const User = require('../models/users');
 const { body, validationResult } = require("express-validator");
-const bcrypt = require('bcryptjs');
-const generateToken = require('../services/generateToken');
+const { register: registerUser, login: loginUser } = require('../repositories/userRepository');
 
 const register = async (req, res) => {
     const errors = validationResult(req);
@@ -11,23 +9,15 @@ const register = async (req, res) => {
     try {
         const { name, email, password, role } = req.body;
 
-        const userExists = await User.findOne({ email });
-        if (userExists) return res.error("E-mail already registered", 400);
+        const response = await registerUser(name, email, password, role);
 
-        const hashedPassword = await bcrypt.hash(password, 10);
-
-        const user = await User.create({
-            name,
-            email,
-            passwordHash: hashedPassword,
-            role: role || 'user'
-        });
-
-        const token = generateToken(user);
-
-        res.success({ token, user: { id: user._id, username: user.username, role: user.role } }, 201);
+        res.success(response, 201);
 
     } catch (error) {
+        if (error.message.includes("E-mail already registered")) {
+            return res.error("E-mail already registered", 400);
+        }
+
         res.error("Error while trying to register. " + error, 500);
     }
 };
@@ -40,17 +30,14 @@ const login = async (req, res) => {
     try {
         const { email, password } = req.body;
 
-        const user = await User.findOne({ email });
-        if (!user) return res.error("Invalid credentials", 401);
+        const response = await loginUser(email, password);
 
-        const isMatch = await bcrypt.compare(password, user.passwordHash);
-        if (!isMatch) return res.error("Invalid credentials", 401);
-
-        const token = generateToken(user);
-
-        res.success({ token, user: { id: user._id, username: user.username, role: user.role } });
+        res.success(response);
 
     } catch (error) {
+        if (error.message.includes("Invalid credentials")) {
+            return res.error("Invalid credentials", 401);
+        }
         res.error("Error while trying to sign in", 500);
     }
 };
