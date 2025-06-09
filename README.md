@@ -33,6 +33,8 @@ Esto levantará dos servicios:
 - **src/routes/:** Definición de rutas para cada recurso.
 - **src/models/:** Modelos de datos de Mongoose.
 - **src/middlewares/:** Middlewares personalizados para manejo de errores y respuestas.
+- **src/repositories/:** Repositorios para acceso a datos de usuarios, productos y pedidos.
+- **src/tests/:** Tests unitarios y de integración para usuarios, productos y pedidos.
 
 ## Endpoints Principales
 ### Usuarios
