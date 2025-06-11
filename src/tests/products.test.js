@@ -59,7 +59,7 @@ describe('productsController', () => {
         });
 
         it('should update product if found and data is valid', async () => {
-            const product = await Product.create({ name: 'Test', description: 'desc', category: 'cat', image: 'http://img.com', price: 10, stock: 5 });
+            const product = await Product.create({ name: 'Test 2', description: 'desc', category: 'cat', image: 'http://img.com', price: 10, stock: 5 });
             const req = { params: { id: product._id.toString() }, body: { name: 'Updated' } };
             const res = { error: jest.fn(), success: jest.fn() };
             require('express-validator').validationResult = () => ({

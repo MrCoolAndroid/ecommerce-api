@@ -67,7 +67,7 @@ const updateOrder = async (id, orderData) => {
 
         if (orderData.status === "cancelled") {
             for (const product of order.products) {
-                const productData = await getProductsById(product.productId);
+                const productData = await getProductById(product.productId);
                 if (!productData) {
                     throw new Error("Product not found: " + product.productId);
                 }
@@ -78,7 +78,7 @@ const updateOrder = async (id, orderData) => {
 
         if (orderData.status === "sent" || orderData.status === "pending") {
             for (const product of order.products) {
-                const productData = await getProductsById(product.productId);
+                const productData = await getProductById(product.productId);
                 if (!productData) {
                     throw new Error("Product not found: " + product.productId);
                 }
