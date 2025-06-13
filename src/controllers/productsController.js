@@ -32,7 +32,7 @@ const validateProduct = [
         .isURL().withMessage("Invalid URL format"),
     body("price")
         .notEmpty().withMessage("Price is required")
-        .isNumeric().withMessage("Price must be a number"),
+        .isNumeric().withMessage("Price must be a number")
         .isInt({ min: 0 }).withMessage("Price must be a positive integer"),
     body("stock")
         .optional()
